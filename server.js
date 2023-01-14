@@ -8,6 +8,7 @@ const path = require('path');
 const bp = require('body-parser');
 const HTMLParser = require('node-html-parser');
 const fs = require('fs');
+const { scheduler } = require('timers/promises');
 
 app.use(bp.json());
 app.use(bp.urlencoded({ extended: true }));
@@ -19,17 +20,134 @@ server.listen(PORT, function () {
     console.log('Server port 2000');
 });
 
-app.get('/rasp', (req, res) => {
-    console.log(req.url);
-    const url = "https://ssau.ru/rasp?groupId=531873998";
+app.get('/groupsAndTeachers', (req, res) => {
+    res.sendFile(path.join(__dirname, 'GroupsAndTeachers.json'));
+})
 
+app.get('/rasp', (req, res) => {
     let request = new XMLHttpRequest();
+    let url = "https://ssau.ru" + req.url;
     request.open("GET", url, true);
     request.send(null);
     request.onreadystatechange = () => {
         if (request.readyState == 4) {
-            console.log(request.responseText);
+            let schedule = {
+                date: [],
+                lesson: [],
+                leftCol: [],
+            };
+            let html = HTMLParser.parse(request.responseText);
+            for (let cell of html.querySelectorAll(".schedule__item")) {
+                if (cell.querySelector(".schedule__discipline")) {
+                    let cellGroups = [];
+                    if (!!cell.querySelectorAll(".schedule__group").length) {
+                        for (let group of cell.querySelectorAll(".schedule__group")) {
+                            if (group.innerText.trim() !== "") {
+                                cellGroups.push(JSON.stringify({
+                                    name: group.innerText,
+                                    link: group.getAttribute("href") ?? null
+                                }))
+                            } else {
+                                cellGroups.push(JSON.stringify({
+                                    name: "",
+                                    link: null
+                                }))
+                            }
+                        }
+                    } else if (!!cell.querySelectorAll(".schedule__groups").length) {
+                        for (let group of cell.querySelectorAll(".schedule__groups")) {
+                            if (group.innerText.trim() !== "") {
+                                cellGroups.push(JSON.stringify({
+                                    name: group.innerText,
+                                    link: group.getAttribute("href") ?? null
+                                }))
+                            } else {
+                                cellGroups.push(JSON.stringify({
+                                    name: "",
+                                    link: null
+                                }))
+                            }
+                        }
+                    }
+                    schedule.lesson.push({
+                        subject: cell.querySelector(".schedule__discipline").innerText,
+                        class: cell.querySelector(".schedule__place").innerText,
+                        teacher: JSON.stringify(cell.querySelector(".schedule__teacher > .caption-text") === null ?
+                            {
+                                name: "",
+                                link: null,
+                            } :
+                            {
+                                name: cell.querySelector(".schedule__teacher > .caption-text") ? cell.querySelector("schedule__teacher > .caption-text").innerText : "",
+                                link: cell.querySelector(".schedule__teacher > .caption-text").getAttribute("href")
+                            }),
+                        groups: cellGroups
+                    })
+                } else if (!!root.querySelectorAll(".schedule__item + .schedule__head").length && !schedule.dates.length) {
+                    for (let cell of root.querySelectorAll(".schedule__item + .schedule__head")) {
+                        schedule.dates.push(cell.childNodes[0].innerText + cell.childNodes[1].innerText)
+                    }
+                } else {
+                    schedule.lesson.push({
+                        subject: null
+                    })
+                }
+            }
+            for (let cell of html.querySelectorAll(".schedule__item")) {
+                schedule.leftCol.push(cell.childNodes[0].innerText + cell.childNodes[1].innerText);
+            }
+            schedule["currentWeek"] = html.querySelector(".week-nav-current_week")?.innerText;
+            schedule.lesson = schedule.lesson.slice(6, schedule.lesson.length);
+            res.send(JSON.stringify(schedule));
+        }
+    };
+})
+
+function getGroupsAndTeachers() {
+    let result = { groups: [], teachers: [] };
+    let count = 0;
+    let allHTMLTeachers = [];
+
+    for (let i = 1; i < 6; i++) {
+        let request = new XMLHttpRequest();
+        let url = "https://ssau.ru/rasp/faculty/492430598?course=" + i;
+        request.open("GET", url, true);
+        request.send(null);
+        request.onreadystatechange = () => {
+            if (request.readyState == 4) {
+                let html = HTMLParser.parse(request.responseText);
+                let groups = html.querySelectorAll(".group-catalog__group");
+                for (let group of groups) {
+                    const id = group.getAttribute("href").substr(-9);
+                    result.groups.push({ name: group.innerText, link: `/rasp?groupId=${id}` });
+                }
+            }
         }
     }
-})
- 
+
+    for (let i = 1; i < 116; i++) {
+        let request = new XMLHttpRequest();
+        let url = "https://ssau.ru/staff?page=" + i;
+        request.open("GET", url, true);
+        request.send(null);
+        request.onreadystatechange = () => {
+            if (request.readyState == 4) {
+                count++;
+                allHTMLTeachers.push(request.responseText);
+                if (count === 115) {
+                    for (let teacher of allHTMLTeachers) {
+                        let html = HTMLParser.parse(teacher);
+                        let teachers = html.querySelectorAll(".list-group-item > a");
+                        for (let teacher of teachers) {
+                            const id = teacher.getAttribute("href").replace(/\D/g, '');
+                            result.teachers.push({ name: teacher.innerText, link: `/rasp?staffId=${id}` });
+                        }
+                    }
+                    fs.writeFile("GroupsAndTeachers.json", JSON.stringify(result), () => console.log('Data saved'));
+                }
+            }
+        }
+    }
+}
+
+//getGroupsAndTeachers();

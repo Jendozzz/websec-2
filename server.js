@@ -34,9 +34,10 @@ app.get('/rasp', (req, res) => {
             let schedule = {
                 date: [],
                 lesson: [],
-                leftCol: [],
+                leftCol: []
             };
             let html = HTMLParser.parse(request.responseText);
+
             for (let cell of html.querySelectorAll(".schedule__item")) {
                 if (cell.querySelector(".schedule__discipline")) {
                     let cellGroups = [];
@@ -54,38 +55,24 @@ app.get('/rasp', (req, res) => {
                                 }))
                             }
                         }
-                    } else if (!!cell.querySelectorAll(".schedule__groups").length) {
-                        for (let group of cell.querySelectorAll(".schedule__groups")) {
-                            if (group.innerText.trim() !== "") {
-                                cellGroups.push(JSON.stringify({
-                                    name: group.innerText,
-                                    link: group.getAttribute("href") ?? null
-                                }))
-                            } else {
-                                cellGroups.push(JSON.stringify({
-                                    name: "",
-                                    link: null
-                                }))
-                            }
-                        }
-                    }
+                    } 
                     schedule.lesson.push({
                         subject: cell.querySelector(".schedule__discipline").innerText,
-                        class: cell.querySelector(".schedule__place").innerText,
+                        place: cell.querySelector(".schedule__place").innerText,
                         teacher: JSON.stringify(cell.querySelector(".schedule__teacher > .caption-text") === null ?
                             {
                                 name: "",
                                 link: null,
                             } :
                             {
-                                name: cell.querySelector(".schedule__teacher > .caption-text") ? cell.querySelector("schedule__teacher > .caption-text").innerText : "",
+                                name: cell.querySelector(".schedule__teacher > .caption-text") ? cell.querySelector(".schedule__teacher > .caption-text").innerText : "",
                                 link: cell.querySelector(".schedule__teacher > .caption-text").getAttribute("href")
                             }),
                         groups: cellGroups
                     })
-                } else if (!!root.querySelectorAll(".schedule__item + .schedule__head").length && !schedule.dates.length) {
-                    for (let cell of root.querySelectorAll(".schedule__item + .schedule__head")) {
-                        schedule.dates.push(cell.childNodes[0].innerText + cell.childNodes[1].innerText)
+                } else if (!!html.querySelectorAll(".schedule__item + .schedule__head").length && !schedule.date.length) {
+                    for (let cell of html.querySelectorAll(".schedule__item + .schedule__head")) {
+                        schedule.date.push(cell.childNodes[0].innerText + cell.childNodes[1].innerText)
                     }
                 } else {
                     schedule.lesson.push({
@@ -93,7 +80,7 @@ app.get('/rasp', (req, res) => {
                     })
                 }
             }
-            for (let cell of html.querySelectorAll(".schedule__item")) {
+            for (let cell of html.querySelectorAll(".schedule__time")) {
                 schedule.leftCol.push(cell.childNodes[0].innerText + cell.childNodes[1].innerText);
             }
             schedule["currentWeek"] = html.querySelector(".week-nav-current_week")?.innerText;

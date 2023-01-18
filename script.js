@@ -6,7 +6,7 @@ fetch('/groupsAndTeachers')
     .then((res) => {
         let selectElement = document.querySelector("#select-group");
         for (let group of res.groups) {
-            let groupElement = document.createElement("GroupsAndTeachers");
+            let groupElement = document.createElement("option");
             groupElement.innerHTML = group.name;
             groupElement.setAttribute("value", group.link);
             selectElement.appendChild(groupElement);
@@ -18,7 +18,7 @@ fetch('/groupsAndTeachers')
         })
         let selectElement2 = document.querySelector("#select-teacher");
         for (let teacher of res.teachers) {
-            let teacherElement = document.createElement("GroupsAndTeachers");
+            let teacherElement = document.createElement("option");
             teacherElement.innerHTML = teacher.name;
             teacherElement.setAttribute("value", teacher.link);
             selectElement2.appendChild(teacherElement);
@@ -49,17 +49,20 @@ function generateSchedule(data) {
         table.removeChild(child);
     }
     let header = table.insertRow();
-    header.insertCell().appendChild(document.createTextNode("¬ÂÏˇ"));
+    header.insertCell().appendChild(document.createTextNode("–í—Ä–µ–º—è"));
+    header.classList.add("table-head");
     let ind = 0;
     for (let headerCell of data.date) {
         let cell = header.insertCell();
         cell.classList.add(`column-${ind}`);
         ind++;
-        cell.appendChild(document.createTextNode(headerCell));
+        cell.appendChild(document.createTextNode(headerCell.replace(/\./g, '').replace(/\d/g, '')));
+        cell.appendChild(document.createElement("br"));
+        cell.appendChild(document.createTextNode(headerCell.replace(/[^.\d]/g, '')));
     }
     for (let i = 0; i < data.leftCol.length; i++) {
         let row = table.insertRow();
-        let cellTime = row.insertCell();;
+        let cellTime = row.insertCell();
         cellTime.appendChild(document.createTextNode(data.leftCol[i].substr(0, 6)));
         cellTime.appendChild(document.createElement("br"));
         cellTime.appendChild(document.createTextNode(data.leftCol[i].substr(6)));

@@ -6,9 +6,34 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="style.css">
-    <title>����������</title>
+    <title>Расписание</title>
 </head>
 <body>
-    dsf
+    <div class="title"> Расписание </div>
+    <div class="schedule-container">
+        <div class="header">
+            <div>
+                <button id="previousWeek" onclick="changeWeek(false)">
+                    < Предыдущая неделя
+                </button>
+            </div>
+            <div class="info">
+                <select id="select-group">
+                    <option> Группа </option>
+                </select>
+                <select id="select-teacher">
+                    <option> Преподаватель </option>
+                </select>
+                <p class="selected-rasp">6412-100503D</p>
+            </div>
+            <div>
+                <button id="nextWeek" onclick="changeWeek(true)">
+                    Следующая неделя >
+                </button>
+            </div>
+        </div>
+        <table id="schedule"></table>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
